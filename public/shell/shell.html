@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0f14">
+<title>VPS Shell</title>
+<link rel="stylesheet" href="xterm.css">
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-soft: #111823;
+    --border: #1e2a38;
+    --text: #d8e1ea;
+    --muted: #7d8b9a;
+    --accent: #38bdf8;
+    --green: #34d399;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    min-height: 46px;
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; letter-spacing: .3px; white-space: nowrap; }
+  .brand svg { width: 17px; height: 17px; color: var(--accent); flex: none; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(52, 211, 153, .16); }
+  .dot.busy { background: #fbbf24; }
+  .dot.off { background: var(--red); }
+  .actions { display: flex; align-items: center; gap: 6px; }
+  button {
+    font: inherit;
+    font-size: 12px;
+    color: var(--text);
+    background: #17212e;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 11px;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+    white-space: nowrap;
+  }
+  button:hover { background: #1e2b3c; border-color: #2b3d52; }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04121c; font-weight: 700; }
+  button.primary:hover { background: #7dd3fc; border-color: #7dd3fc; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .icon-btn { padding: 6px 9px; }
+
+  #stage { position: relative; flex: 1; min-height: 0; background: var(--bg); }
+  #terminal { position: absolute; inset: 0; padding: 6px 4px 4px 10px; }
+  #terminal .xterm { height: 100%; }
+  #terminal .xterm-viewport { background-color: transparent !important; scrollbar-width: thin; }
+  #terminal .xterm-viewport::-webkit-scrollbar { width: 10px; }
+  #terminal .xterm-viewport::-webkit-scrollbar-thumb { background: #253345; border-radius: 6px; border: 2px solid var(--bg); }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(8, 12, 18, .82);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+  }
+  .overlay[hidden] { display: none; }
+  .card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 22px 22px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  }
+  .card h1 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+  .card p { margin: 0 0 16px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+  .card label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .field { display: flex; gap: 8px; }
+  input[type="password"], input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: #0a1119;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56, 189, 248, .12); }
+  .error { min-height: 18px; margin: 9px 0 0; font-size: 12px; color: var(--red); }
+  .hint { margin: 14px 0 0; font-size: 11.5px; line-height: 1.6; color: var(--muted); }
+  .hint code { background: #0a1119; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; font-size: 11px; }
+  .offline-box { text-align: center; }
+  .offline-box h2 { margin: 0 0 8px; font-size: 16px; }
+  .offline-box p { margin: 0 0 18px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+  @media (max-width: 640px) {
+    header { padding: 7px 10px; gap: 8px; }
+    .brand span { display: none; }
+    .status { font-size: 11px; }
+    button { padding: 6px 9px; }
+    #terminal { padding: 4px 2px 2px 6px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+        <path d="M6 9l3 3-3 3M12 15h5"></path>
+      </svg>
+      <span>VPS Shell</span>
+    </div>
+    <div class="status"><span id="dot" class="dot"></span><span id="status-text">未连接</span></div>
+    <div class="actions">
+      <button id="btn-clear" type="button" title="清屏">清屏</button>
+      <button id="btn-full" type="button" title="全屏" class="icon-btn" aria-label="全屏">⛶</button>
+      <button id="btn-reconnect" type="button">重连</button>
+      <button id="btn-logout" type="button" title="退出登录">退出</button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div id="terminal"></div>
+
+    <div id="login-overlay" class="overlay" hidden>
+      <form id="login-form" class="card" autocomplete="off">
+        <h1>登录终端</h1>
+        <p>输入访问密码后即可在当前服务器上执行命令。</p>
+        <label for="password">访问密码</label>
+        <div class="field">
+          <input id="password" name="password" type="password" autocomplete="current-password" spellcheck="false" autofocus>
+          <button type="submit" class="primary" id="btn-login">登录</button>
+        </div>
+        <div class="error" id="login-error" role="alert"></div>
+        <p class="hint">密码来自环境变量 <code>SHELL_PASSWORD</code>；未设置时会在启动日志里显示，并保存在 <code>.shell-token</code>。</p>
+      </form>
+    </div>
+
+    <div id="offline-overlay" class="overlay" hidden>
+      <div class="card offline-box">
+        <h2 id="offline-title">连接已断开</h2>
+        <p id="offline-message">终端会话已结束。点击下方按钮重新建立连接。</p>
+        <button type="button" class="primary" id="btn-retry">重新连接</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="xterm.js"></script>
+<script src="xterm-addon-fit.js"></script>
+<script src="shell.js"></script>
+</body>
+</html>

@@ -9,12 +9,15 @@
   "private": false,
   "scripts": {
     "dev": "node index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node test/shell.test.js"
   },
   "dependencies": {
-    "axios": "latest"
+    "axios": "latest",
+    "node-pty": "^1.1.0",
+    "ws": "^8.22.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   }
 }

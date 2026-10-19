@@ -1,0 +1,7 @@
+node_modules
+.git
+.cline-home
+test
+.shell-token
+npm-debug.log*
+*.log
