@@ -1,20 +1,22 @@
 {
   "name": "nodejs",
-  "version": "1,0,0",
-  "description": "Thsi is a node project",
+  "version": "1.0.0",
+  "description": "Node.js service for the Infrlo project",
   "main": "index.js",
-  "author": "",
-  "repository": "",
-  "license": "MIT",
-  "private": false,
   "scripts": {
     "dev": "node index.js",
     "start": "node index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aexiles/infrlo.git"
+  },
+  "license": "MIT",
+  "private": false,
   "dependencies": {
-    "axios": "latest"
+    "axios": "^1.20.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   }
 }
